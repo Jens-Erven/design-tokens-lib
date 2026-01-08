@@ -5,15 +5,16 @@ This repository builds and publishes design tokens as an npm package. It transfo
 ## Purpose
 
 This library:
+
 - Fetches design tokens from `design-token-repo`
 - Validates token structure
 - Transforms tokens into multiple formats (TypeScript, CSS, Tailwind CSS v4)
-- Publishes to npm as `@portima/design-tokens`
+- Publishes to npm as `@jens_erven/design-tokens`
 
 ## Installation
 
 ```bash
-npm install @portima/design-tokens
+npm install @jens_erven/design-tokens
 ```
 
 ## Usage
@@ -21,8 +22,8 @@ npm install @portima/design-tokens
 ### TypeScript Tokens
 
 ```typescript
-import * as amsterdamLight from '@portima/design-tokens/tokens/amsterdam/light';
-import * as amsterdamDark from '@portima/design-tokens/tokens/amsterdam/dark';
+import * as amsterdamLight from "@jens_erven/design-tokens/tokens/amsterdam/light";
+import * as amsterdamDark from "@jens_erven/design-tokens/tokens/amsterdam/dark";
 
 console.log(amsterdamLight.primary); // "#009996"
 ```
@@ -31,10 +32,11 @@ console.log(amsterdamLight.primary); // "#009996"
 
 ```typescript
 // Import CSS variables
-import '@portima/design-tokens/css/amsterdam/light';
+import "@jens_erven/design-tokens/css/amsterdam/light";
 ```
 
 Then use in your CSS:
+
 ```css
 .my-component {
   color: var(--primary);
@@ -46,10 +48,11 @@ Then use in your CSS:
 
 ```typescript
 // Import Tailwind CSS v4 theme
-import '@portima/design-tokens/css/tailwind';
+import "@jens_erven/design-tokens/css/tailwind";
 ```
 
 Then apply theme classes:
+
 ```html
 <html class="theme-amsterdam">
   <!-- Light mode -->
@@ -61,12 +64,13 @@ Then apply theme classes:
 ```
 
 JavaScript theme switching:
+
 ```javascript
 // Switch theme
-document.documentElement.className = 'theme-barcelona';
+document.documentElement.className = "theme-barcelona";
 
 // Toggle dark mode
-document.documentElement.classList.toggle('dark');
+document.documentElement.classList.toggle("dark");
 ```
 
 ## Available Themes
@@ -120,13 +124,14 @@ This package uses Tailwind CSS v4 syntax:
 
 The package exports:
 
-- **TypeScript tokens**: `@portima/design-tokens/tokens/{theme}/{mode}`
-- **CSS variables**: `@portima/design-tokens/css/{theme}/{mode}`
-- **Tailwind CSS v4**: `@portima/design-tokens/css/tailwind`
+- **TypeScript tokens**: `@jens_erven/design-tokens/tokens/{theme}/{mode}`
+- **CSS variables**: `@jens_erven/design-tokens/css/{theme}/{mode}`
+- **Tailwind CSS v4**: `@jens_erven/design-tokens/css/tailwind`
 
 ## CI/CD
 
 This repository automatically:
+
 - Listens for `repository_dispatch` events from `design-token-repo`
 - Fetches latest tokens
 - Validates and builds
@@ -137,4 +142,3 @@ This repository automatically:
 
 - **design-token-repo**: Source of truth for Figma token exports
 - **component-lib**: Consumes this package and generates MUI themes
-

@@ -1,5 +1,5 @@
 {
-  "name": "@portima/design-tokens",
+  "name": "@jens_erven/design-tokens",
   "version": "0.0.1",
   "description": "Design tokens package - TypeScript, CSS variables, and Tailwind CSS v4 themes",
   "type": "module",
@@ -78,4 +78,3 @@
     "tailwindcss": "^4.1.18"
   }
 }
-

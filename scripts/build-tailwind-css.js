@@ -233,7 +233,7 @@ function kebabCase(str) {
 function logUsageInstructions() {
   log("📚 Usage Instructions:\n");
   log("1. Import the generated app.css in your main entry point:");
-  log('   import "@portima/design-tokens/css/tailwind"\n');
+  log('   import "@jens_erven/design-tokens/css/tailwind"\n');
   log("2. Apply theme classes to your root or any element:");
   log('   <html class="theme-amsterdam">\n');
   log('3. Toggle dark mode by adding the "dark" class:');
@@ -244,4 +244,3 @@ function logUsageInstructions() {
 }
 
 generateTailwindThemes();
-
