@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 yarn.lock
 
 # Build output
@@ -27,3 +26,5 @@ yarn-error.log*
 # Tokens (fetched from design-token-repo)
 tokens-export.json
 
+# Environment variables
+.env*
