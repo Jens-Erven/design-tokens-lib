@@ -1,0 +1,41 @@
+name: Validate on Webhook
+
+on:
+  repository_dispatch:
+    types: [tokens-updated]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Fetch tokens from design-token-repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TOKEN_REPO="${{ secrets.EXPORTED_DESIGN_TOKENS }}"
+          if [ -z "$TOKEN_REPO" ]; then
+            curl -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3.raw" \
+              https://api.github.com/repos/${{ github.repository_owner }}/design-token-repo/contents/tokens-export.json \
+              -o tokens-export.json
+          else
+            curl -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3.raw" \
+              https://api.github.com/repos/$TOKEN_REPO/contents/tokens-export.json \
+              -o tokens-export.json
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate tokens
+        run: npm run validate

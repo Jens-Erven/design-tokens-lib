@@ -1,0 +1,84 @@
+name: Build and Publish
+
+on:
+  repository_dispatch:
+    types: [tokens-updated]
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Fetch tokens from design-token-repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the latest tokens from design-token-repo
+          TOKEN_REPO="${{ secrets.EXPORTED_DESIGN_TOKENS }}"
+          if [ -z "$TOKEN_REPO" ]; then
+            echo "Using default token repo path"
+            curl -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3.raw" \
+              https://api.github.com/repos/${{ github.repository_owner }}/design-token-repo/contents/tokens-export.json \
+              -o tokens-export.json
+          else
+            echo "Fetching from custom token repo: $TOKEN_REPO"
+            curl -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3.raw" \
+              https://api.github.com/repos/$TOKEN_REPO/contents/tokens-export.json \
+              -o tokens-export.json
+          fi
+
+      - name: Validate tokens
+        run: npm run validate
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build tokens
+        run: npm run build
+
+      - name: Get version
+        id: version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Bump version (patch)
+        run: |
+          npm version patch --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+          git push origin "v$NEW_VERSION" || true
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to $(node -p "require('./package.json').version")" || exit 0
+          git push || true

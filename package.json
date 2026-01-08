@@ -1,0 +1,81 @@
+{
+  "name": "@portima/design-tokens",
+  "version": "0.0.1",
+  "description": "Design tokens package - TypeScript, CSS variables, and Tailwind CSS v4 themes",
+  "type": "module",
+  "main": "./output/index.js",
+  "types": "./output/index.d.ts",
+  "exports": {
+    "./tokens/amsterdam/light": "./output/theme-amsterdam/light/ts/tokens.ts",
+    "./tokens/amsterdam/dark": "./output/theme-amsterdam/dark/ts/tokens.ts",
+    "./tokens/barcelona/light": "./output/theme-barcelona/light/ts/tokens.ts",
+    "./tokens/barcelona/dark": "./output/theme-barcelona/dark/ts/tokens.ts",
+    "./tokens/berlin/light": "./output/theme-berlin/light/ts/tokens.ts",
+    "./tokens/berlin/dark": "./output/theme-berlin/dark/ts/tokens.ts",
+    "./tokens/lisbon/light": "./output/theme-lisbon/light/ts/tokens.ts",
+    "./tokens/lisbon/dark": "./output/theme-lisbon/dark/ts/tokens.ts",
+    "./tokens/london/light": "./output/theme-london/light/ts/tokens.ts",
+    "./tokens/london/dark": "./output/theme-london/dark/ts/tokens.ts",
+    "./css/amsterdam/light": "./output/theme-amsterdam/light/css/tokens.css",
+    "./css/amsterdam/dark": "./output/theme-amsterdam/dark/css/tokens.css",
+    "./css/barcelona/light": "./output/theme-barcelona/light/css/tokens.css",
+    "./css/barcelona/dark": "./output/theme-barcelona/dark/css/tokens.css",
+    "./css/berlin/light": "./output/theme-berlin/light/css/tokens.css",
+    "./css/berlin/dark": "./output/theme-berlin/dark/css/tokens.css",
+    "./css/lisbon/light": "./output/theme-lisbon/light/css/tokens.css",
+    "./css/lisbon/dark": "./output/theme-lisbon/dark/css/tokens.css",
+    "./css/london/light": "./output/theme-london/light/css/tokens.css",
+    "./css/london/dark": "./output/theme-london/dark/css/tokens.css",
+    "./css/tailwind": "./output/tailwind/app.css"
+  },
+  "files": [
+    "output",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "validate": "node ./scripts/validate-tokens.js",
+    "flatten:tokens": "node ./scripts/flatten-tokens.js",
+    "build:variables": "node ./scripts/build-multi-themes.js",
+    "build:tailwind": "node ./scripts/build-tailwind-css.js",
+    "build": "npm run validate && npm run flatten:tokens && npm run build:variables && npm run build:tailwind",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "design-tokens",
+    "tokens",
+    "css-variables",
+    "tailwind",
+    "tailwindcss",
+    "tailwind-v4",
+    "typescript"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/design-token-lib.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/design-token-lib/issues"
+  },
+  "homepage": "https://github.com/your-username/design-token-lib#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "sideEffects": [
+    "*.css",
+    "output/*.css"
+  ],
+  "devDependencies": {
+    "@types/node": "^25.0.2",
+    "style-dictionary": "^5.1.1",
+    "tailwindcss": "^4.1.18"
+  }
+}
+
