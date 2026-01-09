@@ -7,6 +7,8 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      BRAND: ${{ github.event.client_payload.brand }}
 
     steps:
       - name: Checkout repository
@@ -17,25 +19,51 @@ jobs:
         with:
           node-version: "18"
 
+      - name: Determine brand name
+        id: brand
+        run: |
+          BRAND="${{ env.BRAND }}"
+          
+          if [ -z "$BRAND" ]; then
+            echo "❌ Error: Brand name is required in payload"
+            exit 1
+          fi
+          
+          echo "brand=$BRAND" >> $GITHUB_OUTPUT
+          echo "Validating tokens for brand: $BRAND"
+
       - name: Fetch tokens from design-token-repo
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          BRAND="${{ steps.brand.outputs.brand }}"
+          BRAND_FILE="brands/${BRAND}-tokens.json"
+          
           TOKEN_REPO="${{ secrets.EXPORTED_DESIGN_TOKENS }}"
           if [ -z "$TOKEN_REPO" ]; then
-            curl -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3.raw" \
-              https://api.github.com/repos/${{ github.repository_owner }}/design-token-repo/contents/tokens-export.json \
-              -o tokens-export.json
+            REPO_PATH="${{ github.repository_owner }}/design-token-repo"
           else
-            curl -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3.raw" \
-              https://api.github.com/repos/$TOKEN_REPO/contents/tokens-export.json \
-              -o tokens-export.json
+            REPO_PATH="$TOKEN_REPO"
           fi
+          
+          # Create brands directory if it doesn't exist
+          mkdir -p brands
+          
+          # Fetch the brand-specific token file
+          curl -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            "https://api.github.com/repos/${REPO_PATH}/contents/${BRAND_FILE}" \
+            -o "${BRAND_FILE}"
+          
+          if [ ! -f "${BRAND_FILE}" ]; then
+            echo "❌ Error: Failed to fetch ${BRAND_FILE}"
+            exit 1
+          fi
+          
+          echo "✅ Fetched ${BRAND_FILE}"
 
       - name: Install dependencies
         run: npm ci
 
       - name: Validate tokens
-        run: npm run validate
+        run: npm run validate -- --brand ${{ steps.brand.outputs.brand }}

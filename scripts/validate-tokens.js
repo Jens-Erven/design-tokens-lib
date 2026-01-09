@@ -1,13 +1,44 @@
 import { promises as fs } from "node:fs";
+import path from "node:path";
 
 const { error, log } = console;
+
+/**
+ * Get brand name from command line arguments or environment
+ */
+function getBrandName() {
+  const args = process.argv.slice(2);
+  const brandIndex = args.indexOf("--brand");
+  
+  if (brandIndex !== -1 && args[brandIndex + 1]) {
+    return args[brandIndex + 1];
+  }
+  
+  // Fallback to environment variable or default
+  return process.env.BRAND || null;
+}
 
 /**
  * Validate design token structure
  */
 const validateTokens = async () => {
   try {
-    const inputPath = "./tokens-export.json";
+    const brand = getBrandName();
+    
+    if (!brand) {
+      error("❌ Error: Brand name is required. Use --brand <brand-name>");
+      process.exit(1);
+    }
+    
+    const inputPath = path.join("brands", `${brand}-tokens.json`);
+
+    // Check if file exists
+    try {
+      await fs.access(inputPath);
+    } catch (err) {
+      error(`❌ Error: Brand file not found: ${inputPath}`);
+      process.exit(1);
+    }
 
     // Read and parse JSON
     let data;
@@ -15,7 +46,7 @@ const validateTokens = async () => {
       const rawData = await fs.readFile(inputPath, "utf-8");
       data = JSON.parse(rawData);
     } catch (err) {
-      error("❌ Invalid JSON syntax:");
+      error(`❌ Invalid JSON syntax in ${inputPath}:`);
       error(err.message);
       process.exit(1);
     }
@@ -87,7 +118,7 @@ const validateTokens = async () => {
       }
     }
 
-    log("✅ Token structure is valid");
+    log(`✅ Token structure is valid for brand: ${brand}`);
     log(`✅ Found ${data.length} theme(s)`);
     log("✅ All themes have light and dark modes");
     log("✅ All tokens have required properties");

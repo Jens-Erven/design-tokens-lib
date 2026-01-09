@@ -4,10 +4,17 @@ on:
   repository_dispatch:
     types: [tokens-updated]
   workflow_dispatch:
+    inputs:
+      brand:
+        description: "Brand name (e.g., brio, mybroker)"
+        required: true
+        type: string
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    env:
+      BRAND: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.brand || github.event.client_payload.brand }}
 
     steps:
       - name: Checkout repository
@@ -19,66 +26,128 @@ jobs:
           node-version: "18"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Determine brand name
+        id: brand
+        run: |
+          BRAND="${{ env.BRAND }}"
+
+          if [ -z "$BRAND" ]; then
+            echo "❌ Error: Brand name is required"
+            exit 1
+          fi
+
+          echo "brand=$BRAND" >> $GITHUB_OUTPUT
+          echo "Building tokens for brand: $BRAND"
+
       - name: Fetch tokens from design-token-repo
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          BRAND="${{ env.BRAND }}"
+          BRAND_FILE="brands/${BRAND}-tokens.json"
+
           # Get the latest tokens from design-token-repo
           TOKEN_REPO="${{ secrets.EXPORTED_DESIGN_TOKENS }}"
           if [ -z "$TOKEN_REPO" ]; then
             echo "Using default token repo path"
-            curl -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3.raw" \
-              https://api.github.com/repos/${{ github.repository_owner }}/design-token-repo/contents/tokens-export.json \
-              -o tokens-export.json
+            REPO_PATH="${{ github.repository_owner }}/design-token-repo"
           else
             echo "Fetching from custom token repo: $TOKEN_REPO"
-            curl -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3.raw" \
-              https://api.github.com/repos/$TOKEN_REPO/contents/tokens-export.json \
-              -o tokens-export.json
+            REPO_PATH="$TOKEN_REPO"
           fi
 
-      - name: Validate tokens
-        run: npm run validate
+          # Create brands directory if it doesn't exist
+          mkdir -p brands
+
+          # Fetch the brand-specific token file
+          curl -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            "https://api.github.com/repos/${REPO_PATH}/contents/${BRAND_FILE}" \
+            -o "brands/${BRAND}-tokens.json"
+
+          if [ ! -f "brands/${BRAND}-tokens.json" ]; then
+            echo "❌ Error: Failed to fetch ${BRAND_FILE}"
+            exit 1
+          fi
+
+          echo "✅ Fetched ${BRAND_FILE}"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build tokens
-        run: npm run build
+      - name: Validate tokens
+        run: npm run validate -- --brand ${{ env.BRAND }}
 
-      - name: Get version
-        id: version
+      - name: Build tokens
+        run: npm run build -- --brand ${{ env.BRAND }}
+
+      - name: Generate package.json
+        run: npm run generate:package -- --brand ${{ env.BRAND }}
+
+      - name: Get current version from npm
+        id: current-version
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          BRAND="${{ env.BRAND }}"
+          PACKAGE_NAME="@jens_erven/design-tokens-${BRAND}"
+
+          # Try to get published version from npm
+          PUBLISHED_VERSION=$(npm view ${PACKAGE_NAME} version 2>/dev/null || echo "")
+
+          if [ -z "$PUBLISHED_VERSION" ]; then
+            # Package doesn't exist yet, start from 0.0.1
+            CURRENT_VERSION="0.0.1"
+            echo "📦 No published version found for ${BRAND}, starting from ${CURRENT_VERSION}"
+          else
+            CURRENT_VERSION="$PUBLISHED_VERSION"
+            echo "📦 Found published version for ${BRAND}: ${CURRENT_VERSION}"
+          fi
+
           echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "Current version: $CURRENT_VERSION"
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Bump version (patch)
+        id: bump-version
         run: |
-          npm version patch --no-git-tag-version
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "New version: $NEW_VERSION"
+          BRAND="${{ env.BRAND }}"
+          CURRENT_VERSION="${{ steps.current-version.outputs.current }}"
+
+          # Calculate next patch version
+          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+
+          # Update package.json version
+          npm pkg set version="${NEW_VERSION}"
+
+          echo "New version for $BRAND: $NEW_VERSION"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          BRAND="${{ env.BRAND }}"
+          echo "Publishing @jens_erven/design-tokens-${BRAND} to npm"
+          npm publish --access public
 
       - name: Create git tag
         run: |
+          BRAND="${{ env.BRAND }}"
+          NEW_VERSION="${{ steps.bump-version.outputs.new_version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
-          git push origin "v$NEW_VERSION" || true
+          git tag -a "${BRAND}-v${NEW_VERSION}" -m "Release ${BRAND} v${NEW_VERSION}"
+          git push origin "${BRAND}-v${NEW_VERSION}" || true
 
       - name: Commit version bump
         run: |
+          BRAND="${{ env.BRAND }}"
+          NEW_VERSION="${{ steps.bump-version.outputs.new_version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json
-          git commit -m "chore: bump version to $(node -p "require('./package.json').version")" || exit 0
+          git commit -m "chore(${BRAND}): bump version to ${NEW_VERSION}" || exit 0
           git push || true

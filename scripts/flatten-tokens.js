@@ -6,6 +6,21 @@ import path from "node:path";
 
 const { error, log } = console;
 
+/**
+ * Get brand name from command line arguments or environment
+ */
+function getBrandName() {
+  const args = process.argv.slice(2);
+  const brandIndex = args.indexOf("--brand");
+  
+  if (brandIndex !== -1 && args[brandIndex + 1]) {
+    return args[brandIndex + 1];
+  }
+  
+  // Fallback to environment variable or default
+  return process.env.BRAND || null;
+}
+
 function transformFigmaData(data) {
   const themes = {};
 
@@ -115,13 +130,31 @@ async function processJSON(inputPath, outputPath, format) {
 // Process both file types
 const processFiles = async () => {
   try {
+    const brand = getBrandName();
+    
+    if (!brand) {
+      error("❌ Error: Brand name is required. Use --brand <brand-name>");
+      process.exit(1);
+    }
+    
+    const inputPath = path.join("brands", `${brand}-tokens.json`);
+    const outputPath = "./output/tokens-flattened.json";
+    
+    // Check if file exists
+    try {
+      await fs.access(inputPath);
+    } catch (err) {
+      error(`❌ Error: Brand file not found: ${inputPath}`);
+      process.exit(1);
+    }
+    
     await processJSON(
-      "./tokens-export.json",
-      "./output/tokens-flattened.json",
+      inputPath,
+      outputPath,
       "figma"
     );
 
-    log("✅ All files processed successfully");
+    log(`✅ All files processed successfully for brand: ${brand}`);
   } catch (err) {
     error("❌ Error processing files:", err);
     process.exit(1);
